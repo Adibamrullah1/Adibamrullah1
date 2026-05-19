@@ -1,27 +1,207 @@
-<h1 align="center">Hi 👋, I'm Mohammad Adib Amrullah</h1>
-<h3 align="center">A passionate fullstack developer from Indonesia</h3>
+const fs = require('fs');
+const path = require('path');
 
-<p align="left"> <img src="https://komarev.com/ghpvc/?username=adibamrullah01&label=Profile%20views&color=0e75b6&style=flat" alt="adibamrullah01" /> </p>
+const GITHUB_USERNAME = 'Adibamrullah1';
+const FULL_NAME = 'Mohammad Adib Amrullah';
+const ROOT_DIR = 'c:\\laragon\\www';
 
-<p align="left"> <a href="https://github.com/ryo-ma/github-profile-trophy"><img src="https://github-profile-trophy.vercel.app/?username=adibamrullah01" alt="adibamrullah01" /></a> </p>
+// Direktori yang diabaikan agar tidak terlalu lama / salah deteksi
+const IGNORED_DIRS = [
+    'node_modules', 'vendor', '.git', '.github', '.next', '.vscode', '.idea',
+    'platforms', 'platform-tools', 'ndk', 'licenses', 'cmake', 'cmdline-tools', 
+    'build-tools', 'flutter', 'ReadmeProfle', 'Profile', '.temp'
+];
 
-<p align="left"> <a href="https://twitter.com/" target="blank"><img src="https://img.shields.io/twitter/follow/?logo=twitter&style=for-the-badge" alt="" /></a> </p>
+// Map tech stack ke badge URL dari shields.io
+const BADGES = {
+    'Next.js': 'https://img.shields.io/badge/Next-black?style=for-the-badge&logo=next.js&logoColor=white',
+    'React': 'https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB',
+    'Laravel': 'https://img.shields.io/badge/laravel-%23FF2D20.svg?style=for-the-badge&logo=laravel&logoColor=white',
+    'Flutter': 'https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white',
+    'Tailwind CSS': 'https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white',
+    'Prisma': 'https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white',
+    'TypeScript': 'https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white',
+    'JavaScript': 'https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E',
+    'PHP': 'https://img.shields.io/badge/php-%23777BB4.svg?style=for-the-badge&logo=php&logoColor=white',
+    'MySQL': 'https://img.shields.io/badge/mysql-%2300f.svg?style=for-the-badge&logo=mysql&logoColor=white',
+    'PostgreSQL': 'https://img.shields.io/badge/postgresql-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white',
+};
 
-- 🔭 I’m currently working on **Key Performance Indicators**
+// Fungsi rekursif untuk mencari proyek berdasarkan file konfigurasi
+function findProjects(dir, depth = 0, maxDepth = 2) {
+    if (depth > maxDepth) return [];
+    
+    let projects = [];
+    let items = [];
+    try {
+        items = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (e) {
+        return [];
+    }
 
-- 📫 How to reach me **adibamr556@gmail.com**
+    const hasPackageJson = items.some(i => i.name === 'package.json');
+    const hasComposerJson = items.some(i => i.name === 'composer.json');
+    const hasPubspecYaml = items.some(i => i.name === 'pubspec.yaml');
 
-<h3 align="left">Connect with me:</h3>
-<p align="left">
-<a href="https://instagram.com/amrullah_adib" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/instagram.svg" alt="amrullah_adib" height="30" width="40" /></a>
-<a href="https://discord.gg/m4lkist" target="blank"><img align="center" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/discord.svg" alt="m4lkist" height="30" width="40" /></a>
+    if (hasPackageJson || hasComposerJson || hasPubspecYaml) {
+        // Ini adalah folder proyek!
+        projects.push(analyzeProject(dir, hasPackageJson, hasComposerJson, hasPubspecYaml));
+        return projects; // Jangan cari lebih dalam di dalam proyek ini
+    }
+
+    // Cari ke dalam sub-folder
+    for (const item of items) {
+        if (item.isDirectory() && !IGNORED_DIRS.some(ignored => item.name.includes(ignored) || item.name.startsWith('.'))) {
+            projects = projects.concat(findProjects(path.join(dir, item.name), depth + 1, maxDepth));
+        }
+    }
+
+    return projects;
+}
+
+// Menganalisis file proyek untuk menentukan Tech Stack
+function analyzeProject(dir, hasPackageJson, hasComposerJson, hasPubspecYaml) {
+    const projectName = path.basename(dir);
+    const stack = new Set();
+    
+    if (hasPackageJson) {
+        try {
+            const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
+            const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+            
+            if (deps['next']) stack.add('Next.js');
+            if (deps['react']) stack.add('React');
+            if (deps['tailwindcss']) stack.add('Tailwind CSS');
+            if (deps['prisma']) stack.add('Prisma');
+            if (deps['typescript']) stack.add('TypeScript');
+            else stack.add('JavaScript');
+            
+        } catch(e) {}
+    }
+    
+    if (hasComposerJson) {
+        try {
+            const comp = JSON.parse(fs.readFileSync(path.join(dir, 'composer.json'), 'utf-8'));
+            const deps = { ...(comp.require || {}), ...(comp['require-dev'] || {}) };
+            
+            if (deps['laravel/framework']) stack.add('Laravel');
+            stack.add('PHP');
+            
+        } catch(e) {}
+    }
+    
+    if (hasPubspecYaml) {
+        stack.add('Flutter');
+    }
+
+    // Cek file spesifik
+    if (fs.existsSync(path.join(dir, 'tailwind.config.js')) || fs.existsSync(path.join(dir, 'tailwind.config.ts'))) {
+        stack.add('Tailwind CSS');
+    }
+    
+    if (fs.existsSync(path.join(dir, '.env'))) {
+        const envContent = fs.readFileSync(path.join(dir, '.env'), 'utf-8');
+        if (envContent.includes('mysql')) stack.add('MySQL');
+        if (envContent.includes('pgsql') || envContent.includes('postgres')) stack.add('PostgreSQL');
+    }
+
+    return {
+        name: projectName,
+        path: dir,
+        stack: Array.from(stack)
+    };
+}
+
+// Format judul agar lebih rapi (misal: "e-procurement" -> "E-Procurement")
+function formatTitle(str) {
+    return str.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+// Mulai membuat README.md
+function generateReadme() {
+    console.log("🔍 Memindai folder proyek lokal...");
+    const projects = findProjects(ROOT_DIR);
+    
+    console.log(`✅ Ditemukan ${projects.length} proyek!`);
+    
+    // Urutkan proyek (yang punya stack lebih banyak di atas)
+    projects.sort((a, b) => b.stack.length - a.stack.length);
+
+    let portfolioMarkdown = '## 💻 Local Projects Portfolio\n\nIni adalah proyek-proyek yang terdeteksi secara otomatis di workspace lokal saya.\n\n<div align="center">\n\n';
+    
+    projects.slice(0, 10).forEach(project => { // Tampilkan max 10 proyek terbaik
+        const badges = project.stack.map(s => {
+            return BADGES[s] ? '<img src="' + BADGES[s] + '" alt="' + s + '">' : '*' + s + '*';
+        }).join(' ');
+        
+        portfolioMarkdown += '### 🚀 ' + formatTitle(project.name) + '\n';
+        portfolioMarkdown += '> ' + (badges || 'Tech Stack: (Automated Detection)') + '\n\n';
+    });
+    
+    portfolioMarkdown += '</div>\n';
+
+    const readmeContent = `
+<h1 align="center">
+  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=30&pause=1000&color=2563EB&center=true&vCenter=true&width=800&lines=Halo%2C+Saya+${FULL_NAME.replace(/ /g, '+')}!+👋;Software+Engineer+%7C+Tech+Enthusiast;Selamat+Datang+di+Profil+GitHub+Saya!" alt="Typing SVG" />
+</h1>
+
+<p align="center">
+  <a href="https://github.com/${GITHUB_USERNAME}">
+    <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=200&section=header&text=${encodeURIComponent(FULL_NAME)}&fontSize=50&fontAlignY=35&animation=fadeIn&fontColor=ffffff" alt="Header" />
+  </a>
 </p>
 
-<h3 align="left">Languages and Tools:</h3>
-<p align="left"> <a href="https://developer.android.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/android/android-original-wordmark.svg" alt="android" width="40" height="40"/> </a> <a href="https://www.arduino.cc/" target="_blank" rel="noreferrer"> <img src="https://cdn.worldvectorlogo.com/logos/arduino-1.svg" alt="arduino" width="40" height="40"/> </a> <a href="https://aws.amazon.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/amazonwebservices/amazonwebservices-original-wordmark.svg" alt="aws" width="40" height="40"/> </a> <a href="https://www.blender.org/" target="_blank" rel="noreferrer"> <img src="https://download.blender.org/branding/community/blender_community_badge_white.svg" alt="blender" width="40" height="40"/> </a> <a href="https://getbootstrap.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bootstrap/bootstrap-plain-wordmark.svg" alt="bootstrap" width="40" height="40"/> </a> <a href="https://codeigniter.com" target="_blank" rel="noreferrer"> <img src="https://cdn.worldvectorlogo.com/logos/codeigniter.svg" alt="codeigniter" width="40" height="40"/> </a> <a href="https://www.w3schools.com/css/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/css3/css3-original-wordmark.svg" alt="css3" width="40" height="40"/> </a> <a href="https://www.cypress.io" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/simple-icons/simple-icons/6e46ec1fc23b60c8fd0d2f2ff46db82e16dbd75f/icons/cypress.svg" alt="cypress" width="40" height="40"/> </a> <a href="https://d3js.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/d3js/d3js-original.svg" alt="d3js" width="40" height="40"/> </a> <a href="https://www.docker.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/docker/docker-original-wordmark.svg" alt="docker" width="40" height="40"/> </a> <a href="https://dotnet.microsoft.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/dot-net/dot-net-original-wordmark.svg" alt="dotnet" width="40" height="40"/> </a> <a href="https://www.electronjs.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/electron/electron-original.svg" alt="electron" width="40" height="40"/> </a> <a href="https://www.figma.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/figma/figma-icon.svg" alt="figma" width="40" height="40"/> </a> <a href="https://firebase.google.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/firebase/firebase-icon.svg" alt="firebase" width="40" height="40"/> </a> <a href="https://www.framer.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/framer/framer-icon.svg" alt="framer" width="40" height="40"/> </a> <a href="https://cloud.google.com" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/google_cloud/google_cloud-icon.svg" alt="gcp" width="40" height="40"/> </a> <a href="https://git-scm.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/git-scm/git-scm-icon.svg" alt="git" width="40" height="40"/> </a> <a href="https://www.w3.org/html/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/html5/html5-original-wordmark.svg" alt="html5" width="40" height="40"/> </a> <a href="https://www.adobe.com/in/products/illustrator.html" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/adobe_illustrator/adobe_illustrator-icon.svg" alt="illustrator" width="40" height="40"/> </a> <a href="https://www.java.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/java/java-original.svg" alt="java" width="40" height="40"/> </a> <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" alt="javascript" width="40" height="40"/> </a> <a href="https://www.elastic.co/kibana" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/elasticco_kibana/elasticco_kibana-icon.svg" alt="kibana" width="40" height="40"/> </a> <a href="https://kotlinlang.org" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/kotlinlang/kotlinlang-icon.svg" alt="kotlin" width="40" height="40"/> </a> <a href="https://laravel.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/laravel/laravel-plain-wordmark.svg" alt="laravel" width="40" height="40"/> </a> <a href="https://mariadb.org/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/mariadb/mariadb-icon.svg" alt="mariadb" width="40" height="40"/> </a> <a href="https://www.microsoft.com/en-us/sql-server" target="_blank" rel="noreferrer"> <img src="https://www.svgrepo.com/show/303229/microsoft-sql-server-logo.svg" alt="mssql" width="40" height="40"/> </a> <a href="https://www.mysql.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/mysql/mysql-original-wordmark.svg" alt="mysql" width="40" height="40"/> </a> <a href="https://www.nginx.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nginx/nginx-original.svg" alt="nginx" width="40" height="40"/> </a> <a href="https://nodejs.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original-wordmark.svg" alt="nodejs" width="40" height="40"/> </a> <a href="https://www.oracle.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/oracle/oracle-original.svg" alt="oracle" width="40" height="40"/> </a> <a href="https://www.php.net" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/php/php-original.svg" alt="php" width="40" height="40"/> </a> <a href="https://www.postgresql.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/postgresql/postgresql-original-wordmark.svg" alt="postgresql" width="40" height="40"/> </a> <a href="https://postman.com" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/getpostman/getpostman-icon.svg" alt="postman" width="40" height="40"/> </a> <a href="https://www.python.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg" alt="python" width="40" height="40"/> </a> <a href="https://reactjs.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original-wordmark.svg" alt="react" width="40" height="40"/> </a> <a href="https://reactnative.dev/" target="_blank" rel="noreferrer"> <img src="https://reactnative.dev/img/header_logo.svg" alt="reactnative" width="40" height="40"/> </a> <a href="https://sass-lang.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/sass/sass-original.svg" alt="sass" width="40" height="40"/> </a> <a href="https://tailwindcss.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/tailwindcss/tailwindcss-icon.svg" alt="tailwind" width="40" height="40"/> </a> <a href="https://www.tensorflow.org" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/tensorflow/tensorflow-icon.svg" alt="tensorflow" width="40" height="40"/> </a> <a href="https://unity.com/" target="_blank" rel="noreferrer"> <img src="https://www.vectorlogo.zone/logos/unity3d/unity3d-icon.svg" alt="unity" width="40" height="40"/> </a> <a href="https://vuejs.org/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/vuejs/vuejs-original-wordmark.svg" alt="vuejs" width="40" height="40"/> </a> </p>
+## 🚀 Tentang Saya
+- 👨‍💻 Saya adalah seorang Software Developer yang antusias dalam membangun aplikasi web dan mobile.
+- 💡 Saya tertarik dengan pengembangan **Frontend**, **Backend**, dan **Mobile Apps**.
+- 🛠️ Tech Stack utama saya meliputi **Laravel, Next.js, React, dan Flutter**.
+- 🤖 Selalu bersemangat untuk belajar teknologi baru dan memecahkan masalah dengan kode!
 
-<p><img align="left" src="https://github-readme-stats.vercel.app/api/top-langs?username=adibamrullah01&show_icons=true&locale=en&layout=compact" alt="adibamrullah01" /></p>
+<br>
 
-<p>&nbsp;<img align="center" src="https://github-readme-stats.vercel.app/api?username=adibamrullah01&show_icons=true&locale=en" alt="adibamrullah01" /></p>
+## 📊 GitHub Analytics & Activity
+> Data ini diperbarui secara **otomatis** oleh GitHub.
 
-<p><img align="center" src="https://github-readme-streak-stats.herokuapp.com/?user=adibamrullah01&" alt="adibamrullah01" /></p>
+<div align="center">
+  <img src="https://github-readme-stats.vercel.app/api?username=${GITHUB_USERNAME}&show_icons=true&theme=tokyonight&hide_border=true&count_private=true" width="48%" />
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=${GITHUB_USERNAME}&layout=compact&theme=tokyonight&hide_border=true" width="48%" />
+</div>
+
+<br>
+
+<div align="center">
+  <img src="https://github-readme-streak-stats.herokuapp.com/?user=${GITHUB_USERNAME}&theme=tokyonight&hide_border=true" width="100%" />
+</div>
+
+<br>
+
+### 📈 Activity Graph
+<div align="center">
+  <img src="https://github-readme-activity-graph.vercel.app/graph?username=${GITHUB_USERNAME}&theme=tokyo-night&hide_border=true&area=true" width="100%" />
+</div>
+
+<br>
+
+${portfolioMarkdown}
+
+<br>
+
+## 🏆 GitHub Trophies
+<div align="center">
+  <a href="https://github.com/ryo-ma/github-profile-trophy">
+    <img src="https://github-profile-trophy.vercel.app/?username=${GITHUB_USERNAME}&theme=tokyonight&column=6&no-frame=true&margin-w=15" alt="Trophy" />
+  </a>
+</div>
+
+<br>
+
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=100&section=footer" alt="Footer" />
+</p>
+`;
+
+    fs.writeFileSync(path.join(__dirname, 'README.md'), readmeContent);
+    console.log("✅ Berhasil membuat README.md yang mengagumkan!");
+}
+
+generateReadme();
